@@ -1,7 +1,8 @@
 from collections.abc import Callable
 
+from apps.coordinates import format_coordinate
 from apps.models import ShotResult
-from apps.player import HumanPlayer, Player, format_coordinate
+from apps.player import HumanPlayer, Player
 from apps.renderer import describe, render_boards
 
 
@@ -11,7 +12,7 @@ class Game:
         self.current = 0
         self.write = write
         for player in self.players:
-            player.board.place_fleet_randomly()
+            player.place_fleet()
 
     def play(self) -> Player:
         """Грає партію до кінця і повертає переможця."""

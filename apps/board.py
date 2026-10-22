@@ -37,14 +37,9 @@ class Board:
             self.grid[y][x] = CellState.SHIP
 
     def place_fleet_randomly(self) -> None:
-        lengths = [
-            length
-            for length, count in sorted(FLEET.items(), reverse=True)
-            for _ in range(count)
-        ]
         while True:
-            self._clear()
-            if all(self._place_randomly(length) for length in lengths):
+            self.clear()
+            if all(self._place_randomly(length) for length in fleet_lengths()):
                 return
 
     def receive_shot(self, x: int, y: int) -> ShotResult:
@@ -70,7 +65,7 @@ class Board:
     def all_sunk(self) -> bool:
         return all(ship.is_sunk() for ship in self.ships)
 
-    def _clear(self) -> None:
+    def clear(self) -> None:
         self.grid = [[CellState.EMPTY] * self.size for _ in range(self.size)]
         self.ships = []
 
@@ -114,3 +109,12 @@ def _is_straight_line(cells: set[tuple[int, int]]) -> bool:
     else:
         return False
     return coords == list(range(coords[0], coords[0] + len(coords)))
+
+
+def fleet_lengths() -> list[int]:
+    """Довжини кораблів флоту, від найбільшого: [4, 3, 3, 2, 2, 2, 1, 1, 1, 1]."""
+    return [
+        length
+        for length, count in sorted(FLEET.items(), reverse=True)
+        for _ in range(count)
+    ]

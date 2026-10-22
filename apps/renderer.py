@@ -1,6 +1,6 @@
 from apps.board import Board
 from apps.models import CellState, ShotResult
-from apps.player import LETTERS
+from apps.coordinates import LETTERS
 
 
 SYMBOLS = {

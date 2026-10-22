@@ -1,37 +1,67 @@
 import unittest
 
-from apps.board import Board
+from apps.board import Board, fleet_lengths
 from apps.config import BOARD_SIZE
 from apps.models import Ship, ShotResult
-from apps.player import ComputerPlayer, HumanPlayer, format_coordinate, parse_coordinate
+from apps.player import ComputerPlayer, HumanPlayer
 
 
-class ParseCoordinateTest(unittest.TestCase):
-    def test_valid(self) -> None:
-        self.assertEqual(parse_coordinate("B7", BOARD_SIZE), (1, 6))
-        self.assertEqual(parse_coordinate("b7", BOARD_SIZE), (1, 6))
-        self.assertEqual(parse_coordinate(" a1 ", BOARD_SIZE), (0, 0))
-        self.assertEqual(parse_coordinate("J10", BOARD_SIZE), (9, 9))
+# Правильна розстановка всього флоту, від найбільшого корабля.
+MANUAL_FLEET = ["A1 D1", "A3 C3", "E3 G3", "A5 B5", "D5 E5", "G5 H5", "A7", "C7", "E7", "G7"]
 
-    def test_invalid(self) -> None:
-        for text in ("K1", "A0", "A11", "7B", "", "B", "B7x", "Б7"):
-            with self.subTest(text=text):
-                self.assertIsNone(parse_coordinate(text, BOARD_SIZE))
 
-    def test_format_is_inverse_of_parse(self) -> None:
-        for x in range(BOARD_SIZE):
-            for y in range(BOARD_SIZE):
-                self.assertEqual(parse_coordinate(format_coordinate(x, y), BOARD_SIZE), (x, y))
+def scripted_player(answers: list[str]) -> tuple[HumanPlayer, list[str]]:
+    replies = iter(answers)
+    messages: list[str] = []
+    return HumanPlayer("Ви", read=lambda prompt: next(replies), write=messages.append), messages
 
 
 class HumanPlayerTest(unittest.TestCase):
     def test_asks_again_until_valid(self) -> None:
-        answers = iter(["zz", "C3"])
-        messages: list[str] = []
-        player = HumanPlayer("Ви", read=lambda prompt: next(answers), write=messages.append)
+        player, messages = scripted_player(["zz", "C3"])
 
         self.assertEqual(player.choose_target(Board()), (2, 2))
         self.assertEqual(len(messages), 1)
+
+
+class HumanPlacementTest(unittest.TestCase):
+    def test_random_by_default(self) -> None:
+        player, _ = scripted_player([""])
+        player.place_fleet()
+
+        self.assertEqual(sorted(len(s.cells) for s in player.board.ships), sorted(fleet_lengths()))
+
+    def test_manual_placement(self) -> None:
+        player, _ = scripted_player(["т", *MANUAL_FLEET])
+        player.place_fleet()
+
+        self.assertEqual([len(s.cells) for s in player.board.ships], fleet_lengths())
+        self.assertEqual(player.board.ships[0].cells, {(0, 0), (1, 0), (2, 0), (3, 0)})
+        self.assertEqual(player.board.ships[-1].cells, {(6, 6)})
+
+    def test_rejects_invalid_ships_and_asks_again(self) -> None:
+        player, messages = scripted_player([
+            "так",
+            "A1 A2",   # не та довжина
+            "A1 D2",   # не по прямій
+            "щось",    # не координати
+            MANUAL_FLEET[0],
+            "A2 C2",   # торкається першого корабля
+            *MANUAL_FLEET[1:],
+        ])
+        player.place_fleet()
+
+        self.assertEqual(len(player.board.ships), len(fleet_lengths()))
+        errors = [m for m in messages if not m.startswith("\n") and "Введіть" not in m]
+        self.assertEqual(len(errors), 4)
+        self.assertIn("Потрібен корабель на 4 кл., а введено 2.", errors)
+
+    def test_restart(self) -> None:
+        player, _ = scripted_player(["т", "F10 I10", "A3 C3", "заново", *MANUAL_FLEET])
+        player.place_fleet()
+
+        self.assertEqual(player.board.ships[0].cells, {(0, 0), (1, 0), (2, 0), (3, 0)})
+        self.assertEqual(len(player.board.ships), len(fleet_lengths()))
 
 
 class ComputerPlayerTest(unittest.TestCase):
