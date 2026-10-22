@@ -1,0 +1,28 @@
+# Скомпільований Python.
+__pycache__/
+*.py[cod]
+
+# Віртуальне середовище (uv створює .venv).
+.venv/
+venv/
+
+# Кеші інструментів.
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Збірка пакета.
+build/
+dist/
+*.egg-info/
+
+# Редактори та IDE.
+.idea/
+.vscode/
+
+# Службові файли ОС.
+.DS_Store
+Thumbs.db
+desktop.ini
