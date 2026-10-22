@@ -1,10 +1,12 @@
 from apps.game import Game
 from apps.player import ComputerPlayer, HumanPlayer
+from apps.renderer import supports_color
 
 
 def main():
+    color = supports_color()
     try:
-        Game(HumanPlayer("Ви"), ComputerPlayer("Комп'ютер")).play()
+        Game(HumanPlayer("Ви", color=color), ComputerPlayer("Комп'ютер"), color=color).play()
     except (KeyboardInterrupt, EOFError):
         print("\nГру перервано.")
 

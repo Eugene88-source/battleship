@@ -30,10 +30,12 @@ class HumanPlayer(Player):
         name: str,
         read: Callable[[str], str] = input,
         write: Callable[[str], None] = print,
+        color: bool = False,
     ) -> None:
         super().__init__(name)
         self.read = read
         self.write = write
+        self.color = color
 
     def place_fleet(self) -> None:
         answer = self.read("Розставити кораблі вручну? (т — так, Enter — випадково): ")
@@ -52,7 +54,7 @@ class HumanPlayer(Player):
         lengths = fleet_lengths()
         while len(self.board.ships) < len(lengths):
             length = lengths[len(self.board.ships)]
-            self.write("\n" + "\n".join(render_board(self.board, reveal=True)))
+            self.write("\n" + "\n".join(render_board(self.board, reveal=True, color=self.color)))
             answer = self.read(f"Корабель на {length} кл.: ")
 
             if answer.strip().lower() == RESTART:
