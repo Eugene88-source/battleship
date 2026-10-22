@@ -121,8 +121,26 @@ class ComputerPlayerTest(unittest.TestCase):
         for _ in range(self.RUNS):
             self.assertNotIn(self.player.choose_target(enemy), forbidden)
 
+    def test_first_shot_away_from_edges(self) -> None:
+        # Через клітинки біля центру проходить більше можливих положень кораблів, ніж через краї.
+        for _ in range(self.RUNS):
+            x, y = self.player.choose_target(Board())
+            self.assertTrue(0 < x < BOARD_SIZE - 1 and 0 < y < BOARD_SIZE - 1)
+
+    def test_remaining_ships_exclude_sunk(self) -> None:
+        enemy = Board()
+        enemy.place_ship(Ship({(0, 0), (1, 0)}))
+        enemy.place_ship(Ship({(5, 5)}))
+        enemy.receive_shot(0, 0)
+        enemy.receive_shot(1, 0)
+        enemy.receive_shot(5, 5)
+
+        remaining = ComputerPlayer._remaining_ships(enemy)
+        self.assertEqual(remaining, {4: 1, 3: 2, 2: 2, 1: 3})
+
     def test_smarter_than_random(self) -> None:
-        # Випадкова стрільба в середньому потребує ~96 пострілів; добивання — значно менше.
+        # Випадкова стрільба в середньому потребує ~96 пострілів, випадковий пошук із добиванням — ~58,
+        # пошук за ймовірністю — ~55.
         total = 0
         for _ in range(self.RUNS):
             enemy = Board()
@@ -130,7 +148,7 @@ class ComputerPlayerTest(unittest.TestCase):
             while not enemy.all_sunk():
                 enemy.receive_shot(*self.player.choose_target(enemy))
                 total += 1
-        self.assertLess(total / self.RUNS, 80)
+        self.assertLess(total / self.RUNS, 57)
 
 
 if __name__ == "__main__":

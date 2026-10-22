@@ -1,6 +1,8 @@
 import random
 from abc import ABC, abstractmethod
+from collections import Counter
 from collections.abc import Callable
+from functools import cache
 
 from apps.board import Board, fleet_lengths
 from apps.coordinates import parse_coordinate, parse_ship
@@ -80,15 +82,18 @@ class HumanPlayer(Player):
 
 
 class ComputerPlayer(Player):
-    """Шукає кораблі випадковими пострілами, а влучивши — добиває поранений корабель.
+    """Стріляє туди, де корабель найімовірніший, а влучивши — добиває поранений корабель.
 
     Кораблів суперника комп'ютер не бачить: SHIP для нього — така сама нестріляна клітинка.
-    Усе, що він знає, — позначки пострілів на полі суперника (MISS, HIT, SUNK).
+    Усе, що він знає, — склад флоту і позначки пострілів на полі суперника (MISS, HIT, SUNK).
     """
 
     def choose_target(self, enemy: Board) -> tuple[int, int]:
-        candidates = self._finishing_shots(enemy) or self._open_cells(enemy)
-        if not candidates:
+        weights = self._weights(enemy)
+        if weights:
+            best = max(weights.values())
+            candidates = [cell for cell, weight in weights.items() if weight == best]
+        else:
             # Флот уже потоплено — сюди гра не доходить, але без кандидатів random.choice впав би.
             candidates = [
                 (x, y)
@@ -98,41 +103,55 @@ class ComputerPlayer(Player):
             ]
         return random.choice(candidates)
 
-    def _finishing_shots(self, enemy: Board) -> list[tuple[int, int]]:
-        """Клітинки, де може продовжуватися поранений (влучений, але не потоплений) корабель."""
-        hits = [
+    def _weights(self, enemy: Board) -> Counter[tuple[int, int]]:
+        """Скільки можливих положень кораблів, що лишилися, проходить через кожну клітинку.
+
+        Якщо є влучання, рахуються лише положення, що накривають усі влучання: вони завжди
+        належать одному кораблю, бо комп'ютер добиває корабель до кінця, перш ніж шукати інший.
+        """
+        hits = {
             (x, y)
             for y in range(enemy.size)
             for x in range(enemy.size)
             if enemy.grid[y][x] == CellState.HIT
-        ]
-        if not hits:
-            return []
-
-        xs = {x for x, _ in hits}
-        ys = {y for _, y in hits}
-        if len(hits) > 1 and len(ys) == 1:
-            # Кілька влучань в один рядок — корабель горизонтальний: стріляємо з кінців.
-            y = hits[0][1]
-            ends = [(min(xs) - 1, y), (max(xs) + 1, y)]
-        elif len(hits) > 1 and len(xs) == 1:
-            x = hits[0][0]
-            ends = [(x, min(ys) - 1), (x, max(ys) + 1)]
-        else:
-            ends = [
-                (x + dx, y + dy)
-                for x, y in hits
-                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-            ]
-        return [cell for cell in ends if self._is_open(enemy, *cell)]
-
-    def _open_cells(self, enemy: Board) -> list[tuple[int, int]]:
-        return [
+        }
+        allowed = hits | {
             (x, y)
             for y in range(enemy.size)
             for x in range(enemy.size)
             if self._is_open(enemy, x, y)
-        ]
+        }
+
+        weights: Counter[tuple[int, int]] = Counter()
+        for length, count in self._remaining_ships(enemy).items():
+            for line in _lines(enemy.size, length):
+                if hits.issubset(line) and allowed.issuperset(line):
+                    for cell in line:
+                        if cell not in hits:
+                            weights[cell] += count
+        return weights
+
+    @staticmethod
+    def _remaining_ships(enemy: Board) -> Counter[int]:
+        """Довжини ще не потоплених кораблів: увесь флот мінус потоплені кораблі на полі."""
+        remaining = Counter(fleet_lengths())
+        seen: set[tuple[int, int]] = set()
+        for y in range(enemy.size):
+            for x in range(enemy.size):
+                if enemy.grid[y][x] != CellState.SUNK or (x, y) in seen:
+                    continue
+                # Обходимо потоплений корабель: кораблі не торкаються, тож сусідні SUNK — це він сам.
+                stack, length = [(x, y)], 0
+                seen.add((x, y))
+                while stack:
+                    cx, cy = stack.pop()
+                    length += 1
+                    for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                        if (nx, ny) not in seen and enemy.in_bounds(nx, ny) and enemy.grid[ny][nx] == CellState.SUNK:
+                            seen.add((nx, ny))
+                            stack.append((nx, ny))
+                remaining[length] -= 1
+        return +remaining
 
     @staticmethod
     def _is_open(enemy: Board, x: int, y: int) -> bool:
@@ -144,3 +163,21 @@ class ComputerPlayer(Player):
             for dx in (-1, 0, 1)
             for dy in (-1, 0, 1)
         )
+
+
+@cache
+def _lines(size: int, length: int) -> list[tuple[tuple[int, int], ...]]:
+    """Усі положення корабля довжини length на полі size×size: горизонтальні й вертикальні."""
+    horizontal = [
+        tuple((x + i, y) for i in range(length))
+        for y in range(size)
+        for x in range(size - length + 1)
+    ]
+    if length == 1:
+        return horizontal
+    vertical = [
+        tuple((x, y + i) for i in range(length))
+        for x in range(size)
+        for y in range(size - length + 1)
+    ]
+    return horizontal + vertical
