@@ -7,7 +7,7 @@ LETTERS = string.ascii_uppercase
 def parse_coordinate(text: str, size: int) -> tuple[int, int] | None:
     """«B7» → (1, 6): літера — стовпець, число — рядок. None, якщо формат невірний або клітинка поза полем."""
     text = text.strip().upper()
-    if len(text) < 2 or text[0] not in LETTERS[:size] or not text[1:].isdigit():
+    if len(text) < 2 or text[0] not in LETTERS[:size] or not (text[1:].isascii() and text[1:].isdecimal()):
         return None
     x = LETTERS.index(text[0])
     y = int(text[1:]) - 1

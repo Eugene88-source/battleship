@@ -12,7 +12,7 @@ class ParseCoordinateTest(unittest.TestCase):
         self.assertEqual(parse_coordinate("J10", BOARD_SIZE), (9, 9))
 
     def test_invalid(self) -> None:
-        for text in ("K1", "A0", "A11", "7B", "", "B", "B7x", "Б7"):
+        for text in ("K1", "A0", "A11", "7B", "", "B", "B7x", "Б7", "A²", "B٣"):
             with self.subTest(text=text):
                 self.assertIsNone(parse_coordinate(text, BOARD_SIZE))
 

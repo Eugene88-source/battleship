@@ -125,6 +125,21 @@ class PlaceFleetRandomlyTest(unittest.TestCase):
                 board.receive_shot(x, y)
         self.assertTrue(board.all_sunk())
 
+    def test_fleet_does_not_fit(self) -> None:
+        board = Board(3)
+        with self.assertRaises(ValueError):
+            board.place_fleet_randomly()
+        self.assertEqual(board.ships, [])
+
+
+class BoardSizeTest(unittest.TestCase):
+    def test_size_limited_by_letters(self) -> None:
+        Board(26)
+        for size in (0, 27):
+            with self.subTest(size=size):
+                with self.assertRaises(ValueError):
+                    Board(size)
+
 
 if __name__ == "__main__":
     unittest.main()

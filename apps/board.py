@@ -1,14 +1,18 @@
 import random
 
 from apps.config import BOARD_SIZE, FLEET
+from apps.coordinates import LETTERS
 from apps.models import CellState, Ship, ShotResult
 
 
 MAX_PLACEMENT_ATTEMPTS = 1000
+MAX_FLEET_ATTEMPTS = 100
 
 
 class Board:
     def __init__(self, size: int = BOARD_SIZE) -> None:
+        if not 1 <= size <= len(LETTERS):
+            raise ValueError(f"Розмір поля має бути від 1 до {len(LETTERS)}, а не {size}")
         self.size = size
         self.grid: list[list[CellState]] = [
             [CellState.EMPTY] * size for _ in range(size)
@@ -37,10 +41,12 @@ class Board:
             self.grid[y][x] = CellState.SHIP
 
     def place_fleet_randomly(self) -> None:
-        while True:
+        for _ in range(MAX_FLEET_ATTEMPTS):
             self.clear()
             if all(self._place_randomly(length) for length in fleet_lengths()):
                 return
+        self.clear()
+        raise ValueError(f"Флот {fleet_lengths()} не вміщається на поле {self.size}×{self.size}")
 
     def receive_shot(self, x: int, y: int) -> ShotResult:
         if not self.in_bounds(x, y):
