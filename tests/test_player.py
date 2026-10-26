@@ -3,7 +3,7 @@ import unittest
 from apps.board import Board, fleet_lengths
 from apps.config import BOARD_SIZE
 from apps.models import Ship, ShotResult
-from apps.player import ComputerPlayer, HumanPlayer
+from apps.player import ComputerPlayer, HumanPlayer, QuitGame
 
 
 # Правильна розстановка всього флоту, від найбільшого корабля.
@@ -22,6 +22,13 @@ class HumanPlayerTest(unittest.TestCase):
 
         self.assertEqual(player.choose_target(Board()), (2, 2))
         self.assertEqual(len(messages), 1)
+
+    def test_quit_when_shooting(self) -> None:
+        for word in ("вихід", " Q ", "exit"):
+            with self.subTest(word=word):
+                player, _ = scripted_player([word])
+                with self.assertRaises(QuitGame):
+                    player.choose_target(Board())
 
 
 class HumanPlacementTest(unittest.TestCase):
@@ -62,6 +69,13 @@ class HumanPlacementTest(unittest.TestCase):
 
         self.assertEqual(player.board.ships[0].cells, {(0, 0), (1, 0), (2, 0), (3, 0)})
         self.assertEqual(len(player.board.ships), len(fleet_lengths()))
+
+    def test_quit_during_placement(self) -> None:
+        for answers in (["вихід"], ["т", MANUAL_FLEET[0], "вихід"]):
+            with self.subTest(answers=answers):
+                player, _ = scripted_player(answers)
+                with self.assertRaises(QuitGame):
+                    player.place_fleet()
 
 
 class ComputerPlayerTest(unittest.TestCase):

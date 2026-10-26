@@ -11,6 +11,12 @@ from apps.renderer import render_board
 
 
 RESTART = "заново"
+QUIT = "вихід"
+QUIT_WORDS = (QUIT, "q", "quit", "exit")
+
+
+class QuitGame(Exception):
+    """Гравець вирішив вийти з гри."""
 
 
 class Player(ABC):
@@ -40,7 +46,7 @@ class HumanPlayer(Player):
         self.color = color
 
     def place_fleet(self) -> None:
-        answer = self.read("Розставити кораблі вручну? (т — так, Enter — випадково): ")
+        answer = self._ask("Розставити кораблі вручну? (т — так, Enter — випадково): ")
         if answer.strip().lower() in ("т", "так", "y", "yes"):
             self._place_fleet_manually()
         else:
@@ -50,14 +56,14 @@ class HumanPlayer(Player):
         self.write(
             "Введіть початок і кінець корабля, напр. B2 B5; однопалубний — одна клітинка, напр. C7.\n"
             "Кораблі стоять прямо й не торкаються один одного навіть кутом. "
-            f"Почати розстановку спочатку — «{RESTART}»."
+            f"Почати розстановку спочатку — «{RESTART}», вийти з гри — «{QUIT}»."
         )
         self.board.clear()
         lengths = fleet_lengths()
         while len(self.board.ships) < len(lengths):
             length = lengths[len(self.board.ships)]
             self.write("\n" + "\n".join(render_board(self.board, reveal=True, color=self.color)))
-            answer = self.read(f"Корабель на {length} кл.: ")
+            answer = self._ask(f"Корабель на {length} кл.: ")
 
             if answer.strip().lower() == RESTART:
                 self.board.clear()
@@ -75,10 +81,16 @@ class HumanPlayer(Player):
 
     def choose_target(self, enemy: Board) -> tuple[int, int]:
         while True:
-            target = parse_coordinate(self.read("Ваш постріл (напр. B7): "), enemy.size)
+            target = parse_coordinate(self._ask(f"Ваш постріл (напр. B7; «{QUIT}» — вийти): "), enemy.size)
             if target is not None:
                 return target
             self.write("Невірні координати. Приклад: B7")
+
+    def _ask(self, prompt: str) -> str:
+        answer = self.read(prompt)
+        if answer.strip().lower() in QUIT_WORDS:
+            raise QuitGame
+        return answer
 
 
 class ComputerPlayer(Player):
