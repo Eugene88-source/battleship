@@ -26,7 +26,7 @@ class GameTest(unittest.TestCase):
             def place_fleet(self) -> None:
                 self.board.place_ship(Ship({(0, 0)}))
 
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(ValueError, r"Без флоту: флот \[1\] замість \[4, 3, 3"):
             Game(ComputerPlayer("Перший"), NoFleetPlayer("Без флоту"), write=lambda _: None)
 
 

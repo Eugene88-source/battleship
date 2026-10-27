@@ -1,6 +1,6 @@
 import random
 
-from apps.config import BOARD_SIZE, FLEET
+from apps.config import BOARD_SIZE, FLEET, ConfigError
 from apps.coordinates import LETTERS
 from apps.models import CellState, Ship, ShotResult
 
@@ -55,7 +55,7 @@ class Board:
             if all(self._place_randomly(length) for length in fleet_lengths()):
                 return
         self.clear()
-        raise ValueError(f"Флот {fleet_lengths()} не вміщається на поле {self.size}×{self.size}")
+        raise ConfigError(f"Флот {fleet_lengths()} не вміщається на поле {self.size}×{self.size}")
 
     def receive_shot(self, x: int, y: int) -> ShotResult:
         if not self.in_bounds(x, y):
@@ -82,8 +82,12 @@ class Board:
         return ShotResult.HIT
 
     def has_full_fleet(self) -> bool:
-        """Розставлено весь флот. place_ship не пускає зайвих кораблів, тож досить порахувати їх."""
-        return len(self.ships) == len(fleet_lengths())
+        """На полі рівно той флот, що заданий у FLEET: ні кораблем більше, ні менше."""
+        return bool(self.ships) and self.ship_lengths() == fleet_lengths()
+
+    def ship_lengths(self) -> list[int]:
+        """Довжини розставлених кораблів, від найбільшого — у тому ж порядку, що й fleet_lengths()."""
+        return sorted((len(ship.cells) for ship in self.ships), reverse=True)
 
     def all_sunk(self) -> bool:
         return bool(self.ships) and all(ship.is_sunk() for ship in self.ships)

@@ -1,7 +1,7 @@
 import unittest
 
 from apps.board import Board
-from apps.config import FLEET
+from apps.config import FLEET, ConfigError
 from apps.models import CellState, Ship, ShotResult
 
 
@@ -162,6 +162,12 @@ class HasFullFleetTest(unittest.TestCase):
         board.place_fleet_randomly()
         self.assertTrue(board.has_full_fleet())
 
+    def test_right_count_wrong_lengths(self) -> None:
+        board = Board()
+        # Десять однопалубних в обхід place_ship: кількість збігається, склад — ні.
+        board.ships = [Ship({(x, 0)}) for x in range(sum(FLEET.values()))]
+        self.assertFalse(board.has_full_fleet())
+
 
 class AllSunkTest(unittest.TestCase):
     def test_empty_board_is_not_sunk(self) -> None:
@@ -216,7 +222,7 @@ class PlaceFleetRandomlyTest(unittest.TestCase):
 
     def test_fleet_does_not_fit(self) -> None:
         board = Board(3)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ConfigError):
             board.place_fleet_randomly()
         self.assertEqual(board.ships, [])
 
