@@ -25,7 +25,9 @@ class RenderBoardTest(unittest.TestCase):
         self.assertEqual(lines[0], "   A B C D E F G H I J")
         self.assertEqual(len(lines), 11)
         self.assertEqual(lines[1], " 1 x ■ . . . . . . . .")
-        self.assertEqual(lines[6], " 6 . . . . . # . . . .")
+        self.assertEqual(lines[5], " 5 . . . . o o o . . .")
+        self.assertEqual(lines[6], " 6 . . . . o # o . . .")
+        self.assertEqual(lines[7], " 7 . . . . o o o . . .")
         self.assertEqual(lines[10], "10 . . . . . . . . . o")
 
     def test_hidden_ships(self) -> None:

@@ -32,6 +32,22 @@ class CanPlaceTest(unittest.TestCase):
         self.assertFalse(self.board.can_place({(2, 1)}))  # кутом
         self.assertTrue(self.board.can_place({(3, 0)}))
 
+    def test_cannot_place_on_shot_cell(self) -> None:
+        self.board.receive_shot(5, 5)  # промах
+        self.assertFalse(self.board.can_place({(5, 5)}))
+
+    def test_cannot_touch_hit_ship(self) -> None:
+        self.board.place_ship(Ship({(3, 3), (4, 3), (5, 3)}))
+        self.board.receive_shot(3, 3)
+        # (2, 2) сусідить лише з підбитою клітинкою (3, 3), а не з цілими (4, 3) і (5, 3).
+        self.assertFalse(self.board.can_place({(2, 2)}))
+
+    def test_cannot_touch_sunk_ship(self) -> None:
+        self.board.place_ship(Ship({(3, 3)}))
+        self.board.receive_shot(3, 3)
+        self.assertFalse(self.board.can_place({(2, 2)}))
+        self.assertTrue(self.board.can_place({(1, 1)}))
+
 
 class PlaceShipTest(unittest.TestCase):
     def test_marks_cells_using_x_as_column(self) -> None:
@@ -45,6 +61,28 @@ class PlaceShipTest(unittest.TestCase):
         board.place_ship(Ship({(0, 0), (1, 0)}))
         with self.assertRaises(ValueError):
             board.place_ship(Ship({(1, 1)}))
+
+    def test_ship_with_hits_raises(self) -> None:
+        board = Board()
+        with self.assertRaises(ValueError):
+            board.place_ship(Ship({(0, 0), (1, 0)}, hits={(0, 0)}))
+        self.assertEqual(board.ships, [])
+        self.assertEqual(board.grid[0][0], CellState.EMPTY)
+
+    def test_length_not_in_fleet_raises(self) -> None:
+        board = Board()
+        with self.assertRaises(ValueError):
+            board.place_ship(Ship({(x, 0) for x in range(5)}))
+        self.assertEqual(board.ships, [])
+
+    def test_too_many_ships_of_one_length_raises(self) -> None:
+        board = Board()
+        for i in range(FLEET[1]):
+            board.place_ship(Ship({(i * 2, 0)}))
+        with self.assertRaises(ValueError):
+            board.place_ship(Ship({(0, 9)}))
+        self.assertEqual(len(board.ships), FLEET[1])
+        self.assertEqual(board.grid[9][0], CellState.EMPTY)
 
 
 class ReceiveShotTest(unittest.TestCase):
@@ -76,6 +114,19 @@ class ReceiveShotTest(unittest.TestCase):
         self.assertEqual(self.board.grid[0][1], CellState.SUNK)
         self.assertTrue(self.board.all_sunk())
 
+    def test_sunk_marks_surrounding_cells_as_miss(self) -> None:
+        self.board.receive_shot(0, 0)
+        self.board.receive_shot(1, 0)
+        for x, y in ((2, 0), (0, 1), (1, 1), (2, 1)):
+            self.assertEqual(self.board.grid[y][x], CellState.MISS)
+        self.assertEqual(self.board.grid[0][3], CellState.EMPTY)
+        self.assertEqual(self.board.grid[2][0], CellState.EMPTY)
+        self.assertEqual(self.board.receive_shot(2, 1), ShotResult.ALREADY_SHOT)
+
+    def test_hit_does_not_mark_surrounding_cells(self) -> None:
+        self.board.receive_shot(0, 0)
+        self.assertEqual(self.board.grid[1][0], CellState.EMPTY)
+
     def test_repeated_shot_at_sunk_ship(self) -> None:
         self.board.receive_shot(0, 0)
         self.board.receive_shot(1, 0)
@@ -84,6 +135,18 @@ class ReceiveShotTest(unittest.TestCase):
     def test_out_of_bounds_raises(self) -> None:
         with self.assertRaises(ValueError):
             self.board.receive_shot(10, 0)
+
+
+class AllSunkTest(unittest.TestCase):
+    def test_empty_board_is_not_sunk(self) -> None:
+        self.assertFalse(Board().all_sunk())
+
+    def test_cleared_board_is_not_sunk(self) -> None:
+        board = Board()
+        board.place_ship(Ship({(0, 0)}))
+        board.receive_shot(0, 0)
+        board.clear()
+        self.assertFalse(board.all_sunk())
 
 
 class PlaceFleetRandomlyTest(unittest.TestCase):

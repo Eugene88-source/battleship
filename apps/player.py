@@ -167,14 +167,8 @@ class ComputerPlayer(Player):
 
     @staticmethod
     def _is_open(enemy: Board, x: int, y: int) -> bool:
-        """Сюди ще не стріляли і тут може бути корабель: поруч із потопленим кораблів не буває."""
-        if not enemy.in_bounds(x, y) or enemy.grid[y][x] not in (CellState.EMPTY, CellState.SHIP):
-            return False
-        return not any(
-            enemy.in_bounds(x + dx, y + dy) and enemy.grid[y + dy][x + dx] == CellState.SUNK
-            for dx in (-1, 0, 1)
-            for dy in (-1, 0, 1)
-        )
+        """Сюди ще не стріляли. Клітинки навколо потопленого корабля поле вже позначило як MISS."""
+        return enemy.in_bounds(x, y) and enemy.grid[y][x] in (CellState.EMPTY, CellState.SHIP)
 
 
 @cache

@@ -14,10 +14,9 @@ class Board:
         if not 1 <= size <= len(LETTERS):
             raise ValueError(f"Розмір поля має бути від 1 до {len(LETTERS)}, а не {size}")
         self.size = size
-        self.grid: list[list[CellState]] = [
-            [CellState.EMPTY] * size for _ in range(size)
-        ]
-        self.ships: list[Ship] = []
+        self.grid: list[list[CellState]]
+        self.ships: list[Ship]
+        self.clear()
 
     def in_bounds(self, x: int, y: int) -> bool:
         return 0 <= x < self.size and 0 <= y < self.size
@@ -26,16 +25,23 @@ class Board:
         if not cells or not _is_straight_line(cells):
             return False
         for x, y in cells:
-            if not self.in_bounds(x, y):
+            if not self.in_bounds(x, y) or self.grid[y][x] != CellState.EMPTY:
                 return False
+            # Поруч не має бути жодного корабля — ні цілого, ні підбитого, ні потопленого.
             for nx, ny in self._area(x, y):
-                if self.grid[ny][nx] == CellState.SHIP:
+                if self.grid[ny][nx] in (CellState.SHIP, CellState.HIT, CellState.SUNK):
                     return False
         return True
 
     def place_ship(self, ship: Ship) -> None:
         if not self.can_place(ship.cells):
             raise ValueError(f"Неможливо розмістити корабель у клітинках {sorted(ship.cells)}")
+        if ship.hits:
+            raise ValueError(f"Корабель уже має влучання {sorted(ship.hits)}: ставити можна лише цілий")
+        length = len(ship.cells)
+        placed = sum(1 for other in self.ships if len(other.cells) == length)
+        if placed >= FLEET.get(length, 0):
+            raise ValueError(f"У флоті немає місця для ще одного корабля на {length} кл.: {fleet_lengths()}")
         self.ships.append(ship)
         for x, y in ship.cells:
             self.grid[y][x] = CellState.SHIP
@@ -63,23 +69,30 @@ class Board:
         ship.hits.add((x, y))
         if ship.is_sunk():
             for sx, sy in ship.cells:
+                # За класичними правилами клітинки навколо потопленого корабля відкриваються як промахи.
+                for nx, ny in self._area(sx, sy):
+                    if self.grid[ny][nx] == CellState.EMPTY:
+                        self.grid[ny][nx] = CellState.MISS
                 self.grid[sy][sx] = CellState.SUNK
             return ShotResult.SUNK
         self.grid[y][x] = CellState.HIT
         return ShotResult.HIT
 
     def all_sunk(self) -> bool:
-        return all(ship.is_sunk() for ship in self.ships)
+        return bool(self.ships) and all(ship.is_sunk() for ship in self.ships)
 
     def clear(self) -> None:
         self.grid = [[CellState.EMPTY] * self.size for _ in range(self.size)]
         self.ships = []
 
     def _place_randomly(self, length: int) -> bool:
+        if length > self.size:
+            return False
         for _ in range(MAX_PLACEMENT_ATTEMPTS):
             horizontal = random.choice((True, False))
-            x = random.randrange(self.size)
-            y = random.randrange(self.size)
+            # Початок обираємо так, щоб корабель не виходив за край поля.
+            x = random.randrange(self.size - length + 1 if horizontal else self.size)
+            y = random.randrange(self.size if horizontal else self.size - length + 1)
             if horizontal:
                 cells = {(x + i, y) for i in range(length)}
             else:
