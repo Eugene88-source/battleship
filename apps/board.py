@@ -34,14 +34,15 @@ class Board:
         return True
 
     def place_ship(self, ship: Ship) -> None:
-        if not self.can_place(ship.cells):
-            raise ValueError(f"Неможливо розмістити корабель у клітинках {sorted(ship.cells)}")
+        # Спершу дешеві перевірки самого корабля, потім — сканування поля.
         if ship.hits:
             raise ValueError(f"Корабель уже має влучання {sorted(ship.hits)}: ставити можна лише цілий")
         length = len(ship.cells)
         placed = sum(1 for other in self.ships if len(other.cells) == length)
         if placed >= FLEET.get(length, 0):
             raise ValueError(f"У флоті немає місця для ще одного корабля на {length} кл.: {fleet_lengths()}")
+        if not self.can_place(ship.cells):
+            raise ValueError(f"Неможливо розмістити корабель у клітинках {sorted(ship.cells)}")
         self.ships.append(ship)
         for x, y in ship.cells:
             self.grid[y][x] = CellState.SHIP

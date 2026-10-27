@@ -69,6 +69,13 @@ class PlaceShipTest(unittest.TestCase):
         self.assertEqual(board.ships, [])
         self.assertEqual(board.grid[0][0], CellState.EMPTY)
 
+    def test_ship_checks_come_before_position(self) -> None:
+        board = Board()
+        board.place_ship(Ship({(0, 0)}))
+        # Клітинка зайнята, але про влучання корабля варто сказати першим.
+        with self.assertRaisesRegex(ValueError, "влучання"):
+            board.place_ship(Ship({(0, 0)}, hits={(0, 0)}))
+
     def test_length_not_in_fleet_raises(self) -> None:
         board = Board()
         with self.assertRaises(ValueError):

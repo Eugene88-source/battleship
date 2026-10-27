@@ -1,6 +1,7 @@
 import unittest
 
 from apps.game import Game
+from apps.models import Ship
 from apps.player import ComputerPlayer
 
 
@@ -19,6 +20,14 @@ class GameTest(unittest.TestCase):
             self.assertTrue(loser.board.all_sunk())
             self.assertFalse(winner.board.all_sunk())
             self.assertEqual(messages[-1], f"\nПереміг: {winner.name}.")
+
+    def test_player_without_full_fleet_raises(self) -> None:
+        class NoFleetPlayer(ComputerPlayer):
+            def place_fleet(self) -> None:
+                self.board.place_ship(Ship({(0, 0)}))
+
+        with self.assertRaises(ValueError):
+            Game(ComputerPlayer("Перший"), NoFleetPlayer("Без флоту"), write=lambda _: None)
 
 
 if __name__ == "__main__":
