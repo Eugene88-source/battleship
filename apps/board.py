@@ -35,6 +35,8 @@ class Board:
 
     def place_ship(self, ship: Ship) -> None:
         # Спершу дешеві перевірки самого корабля, потім — сканування поля.
+        if not ship.cells:
+            raise ValueError("Корабель без жодної клітинки")
         if ship.hits:
             raise ValueError(f"Корабель уже має влучання {sorted(ship.hits)}: ставити можна лише цілий")
         length = len(ship.cells)
@@ -78,6 +80,10 @@ class Board:
             return ShotResult.SUNK
         self.grid[y][x] = CellState.HIT
         return ShotResult.HIT
+
+    def has_full_fleet(self) -> bool:
+        """Розставлено весь флот. place_ship не пускає зайвих кораблів, тож досить порахувати їх."""
+        return len(self.ships) == len(fleet_lengths())
 
     def all_sunk(self) -> bool:
         return bool(self.ships) and all(ship.is_sunk() for ship in self.ships)

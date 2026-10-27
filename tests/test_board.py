@@ -69,6 +69,10 @@ class PlaceShipTest(unittest.TestCase):
         self.assertEqual(board.ships, [])
         self.assertEqual(board.grid[0][0], CellState.EMPTY)
 
+    def test_empty_ship_raises(self) -> None:
+        with self.assertRaisesRegex(ValueError, "без жодної клітинки"):
+            Board().place_ship(Ship(set()))
+
     def test_ship_checks_come_before_position(self) -> None:
         board = Board()
         board.place_ship(Ship({(0, 0)}))
@@ -142,6 +146,21 @@ class ReceiveShotTest(unittest.TestCase):
     def test_out_of_bounds_raises(self) -> None:
         with self.assertRaises(ValueError):
             self.board.receive_shot(10, 0)
+
+
+class HasFullFleetTest(unittest.TestCase):
+    def test_empty_board(self) -> None:
+        self.assertFalse(Board().has_full_fleet())
+
+    def test_partial_fleet(self) -> None:
+        board = Board()
+        board.place_ship(Ship({(0, 0)}))
+        self.assertFalse(board.has_full_fleet())
+
+    def test_random_fleet(self) -> None:
+        board = Board()
+        board.place_fleet_randomly()
+        self.assertTrue(board.has_full_fleet())
 
 
 class AllSunkTest(unittest.TestCase):

@@ -1,6 +1,5 @@
 from collections.abc import Callable
 
-from apps.board import fleet_lengths
 from apps.coordinates import format_coordinate
 from apps.models import ShotResult
 from apps.player import HumanPlayer, Player
@@ -22,9 +21,8 @@ class Game:
         for player in self.players:
             player.place_fleet()
             # Без повного флоту гра або скінчилася б раніше часу, або не скінчилася б ніколи.
-            lengths = sorted((len(ship.cells) for ship in player.board.ships), reverse=True)
-            if lengths != fleet_lengths():
-                raise ValueError(f"{player.name}: флот {lengths} замість {fleet_lengths()}")
+            if not player.board.has_full_fleet():
+                raise ValueError(f"{player.name}: флот розставлено не повністю")
 
     def play(self) -> Player:
         """Грає партію до кінця і повертає переможця."""
